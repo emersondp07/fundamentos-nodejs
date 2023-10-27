@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
 import http from "node:http";
+import { Database } from "./database.js";
+import { json } from "./middlewares/json.js";
 
 // CommonJS => require
 // ESModules => import/export
@@ -17,23 +20,28 @@ import http from "node:http";
 
 // HTTP Status Code
 
-const users = [];
+const database = new Database();
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const { method, url } = req;
 
+  await json(req, res);
+
   if (method === "GET" && url === "/users") {
-    return res
-      .setHeader("Content-type", "application/json")
-      .end(JSON.stringify(users));
+    const users = database.select("users");
+    return res.end(JSON.stringify(users));
   }
 
   if (method === "POST" && url === "/users") {
-    users.push({
-      id: 1,
-      name: "John Doe",
-      email: "johndoe@example.com",
-    });
+    const { name, email } = req.body;
+
+    const user = {
+      id: randomUUID(),
+      name,
+      email,
+    };
+
+    database.insert("users", user);
 
     return res.writeHead(201).end();
   }
